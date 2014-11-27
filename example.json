@@ -1,0 +1,9 @@
+{
+    "id": "example",
+    "description": "example_algo",
+    "params": [
+      {"name":"spread", "label":"Spread", "type":"text", "validator":"required"}
+    ],
+    "object": "example.MyBlinkTradeAlgorithm",
+    "url": ""
+}

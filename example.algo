@@ -3,7 +3,8 @@
     "id": "example",
     "description": "example_algo",
     "params": [
-      {"name":"spread", "label":"Spread", "type":"text", "validator":"required"}
+      {"name":"spread", "label":"Spread", "type":"text", value:"0", "validator":"required; validateNumber; validateMin=0; validateMax=100" },
+      {"name":"margin", "label":"Margin", "type":"text", value:"0", "validator":"required; validateNumber; validateMin=0; validateMax=100 "}
     ],
     "creator": "example.MyBlinkTradeAlgorithm.create",
     "destructor": "example.MyBlinkTradeAlgorithm.destroy",
@@ -20,22 +21,19 @@ example = {};
 /**
   * @param {Application} app
   * @param {string} symbol 
-  * @param {Object} params
   * @constructor
   */
-example.MyBlinkTradeAlgorithm = function(app, symbol, params){
+example.MyBlinkTradeAlgorithm = function(app, symbol){
   console.log('example.MyBlinkTradeAlgorithm');
   console.log(symbol);
-  console.log(params);
 };
 
 /**
   * @param {Application} app
   * @param {string} symbol 
-  * @param {Object} params
   */
-example.MyBlinkTradeAlgorithm.create = function(app, symbol, params) {
-  return new example.MyBlinkTradeAlgorithm(app, symbol, params);
+example.MyBlinkTradeAlgorithm.create = function(app, symbol) {
+  return new example.MyBlinkTradeAlgorithm(app, symbol);
 }; 
 
 

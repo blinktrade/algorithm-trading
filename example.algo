@@ -1,0 +1,102 @@
+-----BEGIN ALGO DEFINITION-----
+{
+    "id": "example",
+    "description": "example_algo",
+    "params": [
+      {"name":"spread", "label":"Spread", "type":"text", "validator":"required"}
+    ],
+    "creator": "example.MyBlinkTradeAlgorithm.create",
+    "destructor": "example.MyBlinkTradeAlgorithm.destroy",
+    "url": "https://raw.githubusercontent.com/blinktrade/algorithm-trading/8bd2fe9f19c1b947787a1ed9283864ba752db0fa/example.js"
+}
+-----END ALGO DEFINITION-----
+-----BEGIN ALGO-----
+
+/**
+  * Namespace. Replace example for something unique. 
+  */
+example = {};
+
+/**
+  * @param {Application} app
+  * @param {string} symbol 
+  * @param {Object} params
+  * @constructor
+  */
+example.MyBlinkTradeAlgorithm = function(app, symbol, params){
+  console.log('example.MyBlinkTradeAlgorithm');
+  console.log(symbol);
+  console.log(params);
+};
+
+/**
+  * @param {Application} app
+  * @param {string} symbol 
+  * @param {Object} params
+  */
+example.MyBlinkTradeAlgorithm.create = function(app, symbol, params) {
+  return new example.MyBlinkTradeAlgorithm(app, symbol, params);
+}; 
+
+
+/**
+  * @param {example.MyBlinkTradeAlgorithm} instance
+  */
+example.MyBlinkTradeAlgorithm.destroy = function(instance) {
+  instance = undefined;
+}; 
+
+/**
+  * @param {Object} params
+  */
+example.MyBlinkTradeAlgorithm.prototype.run = function(params) {
+  console.log('run');
+  console.log(params);
+};
+
+example.MyBlinkTradeAlgorithm.prototype.stop = function() {
+  console.log('stop');
+};
+
+/**
+  * @param {Object} params
+  */
+example.MyBlinkTradeAlgorithm.prototype.onUpdateParams = function(params) {
+  console.log('onUpdateParams');
+  console.log(params);
+};
+
+/**
+  * @param {Object} order_book
+  */
+example.MyBlinkTradeAlgorithm.prototype.onOrderBookChange = function(order_book) {
+  console.log('onOrderBookChange');
+  console.log(order_book);
+};
+
+/**
+  * @param {Object} report 
+  */
+example.MyBlinkTradeAlgorithm.prototype.onExecutionReport = function(report) {
+  console.log('onExecutionReport');
+  console.log(report);
+};
+
+/**
+  * @param {Object} trade
+  */
+example.MyBlinkTradeAlgorithm.prototype.onTrade = function(trade) {
+  console.log('onTrade');
+  console.log(trade);
+};
+
+
+/**
+  * @param {Object} balance
+  */
+example.MyBlinkTradeAlgorithm.prototype.onBalanceUpdate = function(balance) {
+  console.log('onBalanceUpdate');
+  console.log(trade);
+};
+
+-----END ALGO-----

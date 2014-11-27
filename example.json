@@ -1,9 +1,0 @@
-{
-    "id": "example",
-    "description": "example_algo",
-    "params": [
-      {"name":"spread", "label":"Spread", "type":"text", "validator":"required"}
-    ],
-    "object_name": "example.MyBlinkTradeAlgorithm",
-    "url": "https://raw.githubusercontent.com/blinktrade/algorithm-trading/8bd2fe9f19c1b947787a1ed9283864ba752db0fa/example.js"
-}

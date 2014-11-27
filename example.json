@@ -5,5 +5,5 @@
       {"name":"spread", "label":"Spread", "type":"text", "validator":"required"}
     ],
     "object": "example.MyBlinkTradeAlgorithm",
-    "url": ""
+    "url": "https://raw.githubusercontent.com/blinktrade/algorithm-trading/8bd2fe9f19c1b947787a1ed9283864ba752db0fa/example.js"
 }

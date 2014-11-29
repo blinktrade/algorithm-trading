@@ -3,12 +3,11 @@
     "id": "example",
     "description": "example_algo",
     "params": [
-      {"name":"spread", "label":"Spread", "type":"text", value:"0", "validator":"required; validateNumber; validateMin=0; validateMax=100" },
-      {"name":"margin", "label":"Margin", "type":"text", value:"0", "validator":"required; validateNumber; validateMin=0; validateMax=100 "}
+      {"name":"field1", "label":"field1", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 0; validateMax 100;" },
+      {"name":"field2", "label":"field2", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 0; validateMax 100;" }
     ],
     "creator": "example.MyBlinkTradeAlgorithm.create",
-    "destructor": "example.MyBlinkTradeAlgorithm.destroy",
-    "url": "https://raw.githubusercontent.com/blinktrade/algorithm-trading/8bd2fe9f19c1b947787a1ed9283864ba752db0fa/example.js"
+    "destructor": "example.MyBlinkTradeAlgorithm.destroy"
 }
 -----END ALGO DEFINITION-----
 -----BEGIN ALGO-----
@@ -47,8 +46,8 @@ example.MyBlinkTradeAlgorithm.destroy = function(instance) {
 /**
   * @param {Object} params
   */
-example.MyBlinkTradeAlgorithm.prototype.run = function(params) {
-  console.log('run');
+example.MyBlinkTradeAlgorithm.prototype.start = function(params) {
+  console.log('start');
   console.log(params);
 };
 

@@ -1,120 +1,13 @@
-/*
------BEGIN ALGO DEFINITION-----
-{
-    "id": "example",
-    "description": "example_algo",
-    "params": [
-      {"name":"field1", "label":"field1", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 0; validateMax 100;" },
-      {"name":"field2", "label":"field2", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 0; validateMax 100;" }
-    ],
-    "creator": "example.MyBlinkTradeAlgorithm.create",
-    "destructor": "example.MyBlinkTradeAlgorithm.destroy"
-}
------END ALGO DEFINITION-----
------BEGIN ALGO-----
-/**/
+// ==ClosureCompiler==
+// @compilation_level ADVANCED_OPTIMIZATIONS
+// @output_file_name default.js
+// @use_closure_library true
+// ==/ClosureCompiler==
 
-/**
-  * Namespace. Replace example for something unique. 
-  */
-var example = {};
-
-/**
-  * @param {Object} application
-  * @param {string} symbol
-  * @constructor
-  */
-example.MyBlinkTradeAlgorithm = function(application, symbol){
-  console.log('example.MyBlinkTradeAlgorithm');
-  console.log(symbol);
-};
-
-/**
-  * @param {Object} application
-  * @param {string} symbol
-  * @param {Object} params
-  */
-example.MyBlinkTradeAlgorithm.create = function(application,symbol,params) {
-  return new example.MyBlinkTradeAlgorithm(application,symbol, params);
-};
+goog.require('goog.array');
 
 
-/**
-  * @param {Blinktrade.Application} instance
-  */
-example.MyBlinkTradeAlgorithm.destroy = function(instance) {
-  instance = undefined;
-};
 
-/**
-  * @param {Object} params
-  */
-example.MyBlinkTradeAlgorithm.prototype.start = function(params) {
-  console.log('start');
-  console.log(params);
-};
-
-example.MyBlinkTradeAlgorithm.prototype.stop = function() {
-  console.log('stop');
-};
-
-/**
-  * @param {Object} params
-  */
-example.MyBlinkTradeAlgorithm.prototype.onUpdateParams = function(params) {
-  console.log('onUpdateParams');
-  console.log(params);
-};
-
-/**
-  * @param {Object} order_book
-  */
-example.MyBlinkTradeAlgorithm.prototype.onOrderBookChange = function(order_book) {
-  console.log('onOrderBookChange');
-  console.log(order_book);
-};
-
-/**
-  * @param {Object} report 
-  */
-example.MyBlinkTradeAlgorithm.prototype.onExecutionReport = function(report) {
-  console.log('onExecutionReport');
-  console.log(report);
-};
-
-/**
-  * @param {Object} trade
-  */
-example.MyBlinkTradeAlgorithm.prototype.onTrade = function(trade) {
-  console.log('onTrade');
-  console.log(trade);
-};
-
-/**
- * @param {Object} ticker
- */
-example.MyBlinkTradeAlgorithm.prototype.onTicker = function(ticker) {
-  console.log('onTicker');
-  console.log(ticker);
-};
-
-/**
-  * @param {Object} balance
-  */
-example.MyBlinkTradeAlgorithm.prototype.onBalanceUpdate = function(balance) {
-  console.log('onBalanceUpdate');
-  console.log(balance);
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-function goog$array$insertAt(arr, obj, index) {
-  Array.prototype.splice.apply(arr, Array.prototype.slice.call([arr,index,0,obj],1));
-}
-
-function goog$bind(fn, selfObj, var_args) {
-  return (fn.call.apply(fn.bind, arguments));
-}
 
 /**
  * @param {string} instance_id
@@ -122,7 +15,7 @@ function goog$bind(fn, selfObj, var_args) {
  * @param {string} symbol
  * @param {Object} open_orders
  * @param {Object} algorithm_definition
- * @param {function} fn_creator
+ * @param {!Function} fn_creator
  * @constructor
  */
 var Application = function( instance_id, websocket_url, symbol, open_orders, algorithm_definition, fn_creator ) {
@@ -141,11 +34,18 @@ var Application = function( instance_id, websocket_url, symbol, open_orders, alg
   this.order_book_ = {};
 
   this.ws_ = new WebSocket(this.websocket_url_);
+
+  /** @type {AlgoInterface} */
   this.instance_ = fn_creator( this, symbol );
-  this.ws_.onopen =  goog$bind(this.onWebSocketOpen_, this);
-  this.ws_.onmessage = goog$bind(this.onWebSocketMessage_, this);
-  this.ws_.onerror = goog$bind(this.onWebSocketError_, this);
+  this.ws_.onopen =  goog.bind(this.onWebSocketOpen_, this);
+  this.ws_.onmessage = goog.bind(this.onWebSocketMessage_, this);
+  this.ws_.onerror = goog.bind(this.onWebSocketError_, this);
 };
+
+/**
+ * @type {AlgoInterface}
+ */
+Application.prototype.instance_;
 
 /**
  * Returns an object with all bids and asks
@@ -321,6 +221,9 @@ Application.prototype.start_ = function(params) {
   postMessage({'rep':'start', 'instance':this.instance_id_});
 };
 
+/**
+ * @param {string=} error_message
+ */
 Application.prototype.terminate_ = function(error_message) {
   try {
     if (this.status_started_) {
@@ -336,6 +239,9 @@ Application.prototype.terminate_ = function(error_message) {
   }
 };
 
+/**
+ * @param {Object} msg
+ */
 Application.prototype.processBalanceMsg_ = function(msg) {
   try {
     this.instance_.onBalanceUpdate(msg);
@@ -344,6 +250,9 @@ Application.prototype.processBalanceMsg_ = function(msg) {
 };
 
 
+/**
+ * @param {Object} msg
+ */
 Application.prototype.processParamsMsg_ = function(msg) {
   this.params_ = msg;
   try {
@@ -352,6 +261,9 @@ Application.prototype.processParamsMsg_ = function(msg) {
   postMessage({'rep':'params', 'instance':this.instance_id_});
 };
 
+/**
+ * @param {Object} msg
+ */
 Application.prototype.processExecutionReportMsg_ = function(msg) {
   if (msg['OrdStatus'] == '2' || msg['OrdStatus'] == '4' ) {
     delete this.open_orders_[msg['OrderID'] ];
@@ -368,7 +280,7 @@ Application.prototype.processExecutionReportMsg_ = function(msg) {
 
 
 Application.prototype.onWebSocketError_ = function (e) {
-  this.terminate(e.data);
+  this.terminate_(e.data);
 };
 
 Application.prototype.onTicker_ = function(msg) {
@@ -393,9 +305,9 @@ Application.prototype.onMDNewOrder_ = function(msg) {
   }
 
   if (side == '0') {
-    goog$array$insertAt(this.order_book_[symbol]['bids'], [price, qty], index);
+    goog.array.insertAt(this.order_book_[symbol]['bids'], [price, qty], index);
   } else if (side == '1') {
-    goog$array$insertAt(this.order_book_[symbol]['asks'], [price, qty], index);
+    goog.array.insertAt(this.order_book_[symbol]['asks'], [price, qty], index);
   }
 
   if (!this.status_started_) {
@@ -611,4 +523,14 @@ addEventListener('message', function(e) {
 }, false);
 
 
-//-----END ALGO-----
+goog.exportSymbol('Application', Application);
+goog.exportProperty(Application.prototype, 'getOrderBook', Application.prototype.getOrderBook);
+goog.exportProperty(Application.prototype, 'getTrades', Application.prototype.getTrades);
+goog.exportProperty(Application.prototype, 'getParameters', Application.prototype.getParameters);
+goog.exportProperty(Application.prototype, 'getOpenOrders', Application.prototype.getOpenOrders);
+goog.exportProperty(Application.prototype, 'getMarket', Application.prototype.getMarket);
+goog.exportProperty(Application.prototype, 'getInstanceID', Application.prototype.getInstanceID);
+goog.exportProperty(Application.prototype, 'showNotification', Application.prototype.showNotification);
+goog.exportProperty(Application.prototype, 'stop', Application.prototype.stop);
+
+

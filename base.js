@@ -13,9 +13,9 @@ goog.require('goog.array');
  * @param {string} instance_id
  * @param {string} websocket_url
  * @param {string} symbol
- * @param {Object} open_orders
- * @param {Object} algorithm_definition
- * @param {!Function} fn_creator
+ * @param {Object.<number,Object.<string, number|string>>} open_orders
+ * @param {Object.<>} algorithm_definition
+ * @param {function(Application,string): AlgorithmTradingInterface} fn_creator
  * @constructor
  */
 var Application = function( instance_id, websocket_url, symbol, open_orders, algorithm_definition, fn_creator ) {
@@ -35,7 +35,7 @@ var Application = function( instance_id, websocket_url, symbol, open_orders, alg
 
   this.ws_ = new WebSocket(this.websocket_url_);
 
-  /** @type {AlgoInterface} */
+  /** @type {AlgorithmTradingInterface} */
   this.instance_ = fn_creator( this, symbol );
   this.ws_.onopen =  goog.bind(this.onWebSocketOpen_, this);
   this.ws_.onmessage = goog.bind(this.onWebSocketMessage_, this);
@@ -43,13 +43,14 @@ var Application = function( instance_id, websocket_url, symbol, open_orders, alg
 };
 
 /**
- * @type {AlgoInterface}
+ * @type {AlgorithmTradingInterface}
  */
 Application.prototype.instance_;
 
+
 /**
  * Returns an object with all bids and asks
- * @return {Object}
+ * @return {Object.<string, Array.<Array.<number>>>}
  *   The returned Object structure is:
  *     {
  *        'bids' : [  [price, qty], [price, qty],  ... [price, qty]  ],

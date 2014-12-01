@@ -2,6 +2,7 @@
 // @compilation_level ADVANCED_OPTIMIZATIONS
 // @output_file_name default.js
 // @use_closure_library true
+// @externs_url https://raw.githubusercontent.com/blinktrade/algorithm-trading/master/algorithm_interface.js
 // ==/ClosureCompiler==
 
 goog.require('goog.array');
@@ -14,7 +15,7 @@ goog.require('goog.array');
  * @param {string} websocket_url
  * @param {string} symbol
  * @param {Object.<number,Object.<string, number|string>>} open_orders
- * @param {Object.<>} algorithm_definition
+ * @param {Object.<string,string|number|Object>} algorithm_definition
  * @param {function(Application,string): AlgorithmTradingInterface} fn_creator
  * @constructor
  */
@@ -136,7 +137,7 @@ Application.prototype.getInstanceID = function() {
  * Show a notification to the user
  * @param {string} title
  * @param {string} description
- * @param {string=} opt_type. Defaults to "info". It can be one of the following values "info", "success", "error"
+ * @param {string=} opt_type Defaults to "info". It can be one of the following values "info", "success", "error"
  */
 Application.prototype.showNotification = function(title, description, opt_type) {
   var notification_type = opt_type | "info";
@@ -149,7 +150,7 @@ Application.prototype.showNotification = function(title, description, opt_type) 
 
 /**
  * Terminates the algorithm.
- * @param {string=} opt_error_message. An error notification will be shown in filled.
+ * @param {string=} opt_error_message An error notification will be shown in filled.
  */
 Application.prototype.stop = function(opt_error_message) {
   try {
@@ -491,12 +492,17 @@ addEventListener('message', function(e) {
     var data = e.data;
     switch (data['req']) {
       case 'create':
+        /**
+         * @type {function(Application,string): AlgorithmTradingInterface}
+         */
+        var creator_fn = /** @type {function(Application,string): AlgorithmTradingInterface} */ (eval(context["algo_definition"]['creator']));
+
         _app = new Application(context["algo_instance_id"],
                                context["wss_url"],
                                context["symbol"],
                                context["open_orders"],
                                context["algo_definition"],
-                               eval(context["algo_definition"]['creator']));
+                               creator_fn);
         break;
       case 'start':
         _app.start_(data['params']);

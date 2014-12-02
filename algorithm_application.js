@@ -160,7 +160,7 @@ Application.prototype.getTrades = function() {
 
 /**
  * Return the parameters previously set.
- * @return {Object}
+ * @return {Object.<string,*>}
  */
 Application.prototype.getParameters = function() {
   return this.params_;

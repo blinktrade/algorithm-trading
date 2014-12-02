@@ -1,0 +1,130 @@
+/*
+-----BEGIN ALGO DEFINITION-----
+{
+    "id": "myalgo",
+    "description": "myalgo_algo",
+    "params": [
+      {"name":"limit", "label":"Limite em R$", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1000;" },
+      {"name":"margin", "label":"Margem de operação em %", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 1; validateMax 5;" }
+    ],
+    "creator": "myalgo.MyBlinkTradeAlgorithm.create",
+    "destructor": "myalgo.MyBlinkTradeAlgorithm.destroy"
+}
+-----END ALGO DEFINITION-----
+-----BEGIN ALGO-----
+/**/
+
+/**
+  * Namespace. 
+  */
+var myalgo = {};
+
+/**
+  * @param {Object} application
+  * @param {string} symbol
+  * @constructor
+  */
+myalgo.MyBlinkTradeAlgorithm = function(application, symbol){
+  console.log('myalgo.MyBlinkTradeAlgorithm');
+  console.log(symbol);
+
+  this.application_ = application;
+  console.log(this.application_.getOpenOrders());
+};
+
+/**
+  * @param {Application} application
+  * @param {string} symbol
+  * @return {myalgo.MyBlinkTradeAlgorithm}
+  */
+myalgo.MyBlinkTradeAlgorithm.create = function(application,symbol) {
+
+  return new myalgo.MyBlinkTradeAlgorithm(application,symbol);
+};
+
+/**
+  * @param {Object} params
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.start = function(params) {
+  this.calculateLimits();
+};
+
+myalgo.MyBlinkTradeAlgorithm.prototype.stop = function() {
+  console.log('stop');
+};
+
+myalgo.MyBlinkTradeAlgorithm.prototype.calculateLimits = function() {
+  var params = this.application_.getParameters();
+  var best_bid = this.application_.getOrderBook()['bids'][0][0];
+  var best_ask = this.application_.getOrderBook()['asks'][0][0];
+  var margin = parseInt(params["margin"],10);
+  
+  if (best_bid == null || best_ask == null) {
+    this.application_.stop("No best bid/ask found.");
+    return;
+  }
+  
+  this.min_limit_bid_price_ = best_ask * ( 100 - margin );
+  this.max_limit_bid_price_ = best_ask * ( 101 - margin );
+  this.min_limit_ask_price_ = best_bid * ( 99 + margin ) ;
+  this.max_limit_ask_price_ = best_bid * ( 100 + margin ) ;;
+
+  console.log(params);
+  console.log( 'min_limit_bid_price_ =' + this.min_limit_bid_price_/1e8 );
+  console.log( 'max_limit_bid_price_ =' + this.max_limit_bid_price_/1e8 );
+  console.log( 'min_limit_ask_price_ =' + this.min_limit_ask_price_/1e8 );
+  console.log( 'max_limit_ask_price_ =' + this.max_limit_ask_price_/1e8 );
+};
+
+/**
+  * @param {Object.<string,*>} params
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.onUpdateParams = function(params) {
+  console.log('onUpdateParams');
+  this.calculateLimits();
+};
+
+/**
+  * @param {Array.<Array.<number>>} order_book
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.onOrderBookChange = function(order_book) {
+  console.log('onOrderBookChange');
+  this.calculateLimits();
+};
+
+/**
+  * @param {Object.<string,string|number>} report
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.onExecutionReport = function(report) {
+  console.log('onExecutionReport');
+  console.log(report);
+  this.calculateLimits();
+};
+
+/**
+  * @param {Object.<string,string|number>} trade
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.onTrade = function(trade) {
+  console.log('onTrade');
+  console.log(trade);
+  this.calculateLimits();
+};
+
+/**
+ * @param {Object.<string,string|number>} ticker
+ */
+myalgo.MyBlinkTradeAlgorithm.prototype.onTicker = function(ticker) {
+  console.log('onTicker');
+  console.log(ticker);
+};
+
+/**
+  * @param {Object.<string,string|number>} balance
+  */
+myalgo.MyBlinkTradeAlgorithm.prototype.onBalanceUpdate = function(balance) {
+  console.log('onBalanceUpdate');
+  console.log(balance);
+  this.calculateLimits();
+};
+
+//-----END ALGO-----

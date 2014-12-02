@@ -50,6 +50,80 @@ Application.prototype.instance_;
 
 
 /**
+ * Send a buy order
+ * @param {number} qty  The amount in satoshis
+ * @param {number} price  The price in satoshis
+ * @param {number=} opt_clientOrderId Defaults to random generated number
+ * @return {number}  Returns the clientOrderId for this order.
+ */
+Application.prototype.sendBuyLimitedOrder = function( qty, price, opt_clientOrderId ) {
+  var clientOrderId = opt_clientOrderId || parseInt( 1e7 * Math.random() , 10 );
+
+  postMessage({ 'rep':'new_order_limited',
+                'instance':this.instance_id_,
+                'qty': qty,
+                'side': '1',  // 1-Buy, 2-Sell
+                'price': price,
+                'client_order_id': clientOrderId
+              });
+
+  return clientOrderId;
+};
+
+/**
+ * Cancel an order.  You must pass opt_clientOrderId nor opt_orderId
+ * @param {number=} opt_clientOrderId Defaults to random generated number
+ * @param {number=} opt_orderId
+ */
+Application.prototype.cancelOrder = function( opt_clientOrderId, opt_orderId ) {
+  if (!goog.isDefAndNotNull(opt_clientOrderId) && !(goog.isDefAndNotNull(opt_orderId))){
+    this.stop('Invalid paramaters. Missing opt_clientOrderId or opt_orderId');
+    return;
+  }
+
+  if (goog.isDefAndNotNull(opt_clientOrderId) && (goog.isDefAndNotNull(opt_orderId))){
+    this.stop('Invalid paramaters. You must passa either opt_clientOrderId or opt_orderId');
+    return;
+  }
+
+  postMessage({ 'rep':'cancel_order',
+                'instance':this.instance_id_,
+                'client_order_id': opt_clientOrderId,
+                'order_id': opt_orderId
+              });
+};
+
+/**
+ * Cancel all orders.
+ */
+Application.prototype.cancelAllOrders = function() {
+  postMessage({ 'rep':'cancel_order', 'instance':this.instance_id_ });
+};
+
+
+/**
+ * Send a sell order
+ * @param {number} qty  The amount in satoshis
+ * @param {number} price  The price in satoshis
+ * @param {number=} opt_clientOrderId Defaults to random generated number
+ * @return {number}  Returns the clientOrderId for this order.
+ */
+Application.prototype.sendSellLimitedOrder = function( qty, price, opt_clientOrderId ) {
+  var clientOrderId = opt_clientOrderId || parseInt( 1e7 * Math.random() , 10 );
+
+  postMessage({ 'rep':'new_order_limited',
+                'instance':this.instance_id_,
+                'qty': qty,
+                'side': '2',  // 1-Buy, 2-Sell
+                'price': price,
+                'client_order_id': clientOrderId
+              });
+
+  return clientOrderId;
+};
+
+
+/**
  * Returns an object with all bids and asks
  * @return {Object.<string, Array.<Array.<number>>>}
  *   The returned Object structure is:
@@ -531,6 +605,10 @@ addEventListener('message', function(e) {
 
 
 goog.exportSymbol('Application', Application);
+goog.exportProperty(Application.prototype, 'sendBuyLimitedOrder', Application.prototype.sendBuyLimitedOrder);
+goog.exportProperty(Application.prototype, 'sendSellLimitedOrder', Application.prototype.sendSellLimitedOrder);
+goog.exportProperty(Application.prototype, 'cancelAllOrders', Application.prototype.cancelAllOrders);
+goog.exportProperty(Application.prototype, 'cancelOrder', Application.prototype.cancelOrder);
 goog.exportProperty(Application.prototype, 'getOrderBook', Application.prototype.getOrderBook);
 goog.exportProperty(Application.prototype, 'getTrades', Application.prototype.getTrades);
 goog.exportProperty(Application.prototype, 'getParameters', Application.prototype.getParameters);

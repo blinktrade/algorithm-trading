@@ -343,9 +343,9 @@ Application.prototype.processBalanceMsg_ = function(msg) {
   try {
     goog.object.forEach( msg, function(balance, currency  ) {
       if (currency.substring(4) == 'locked') {
-        this.instance_.onBalanceUpdate(currency.substring(0,3), balance, 'locked');
+        this.instance_.onBalanceUpdate(currency.substring(0,3), balance,  AlgorithmTradingInterface.BalanceType.LOCKED);
       } else {
-        this.instance_.onBalanceUpdate(currency, balance, 'deposit');
+        this.instance_.onBalanceUpdate(currency, balance, AlgorithmTradingInterface.BalanceType.DEPOSIT);
       }
     }, this );
   } catch(e) {}

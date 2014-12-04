@@ -6,6 +6,7 @@
 // ==/ClosureCompiler==
 
 goog.require('goog.array');
+goog.require('goog.object');
 
 
 
@@ -54,8 +55,8 @@ Application.prototype.instance_;
  * Send a buy order
  * @param {number} qty  The amount in satoshis
  * @param {number} price  The price in satoshis
- * @param {number=} opt_clientOrderId Defaults to random generated number
- * @return {number}  Returns the clientOrderId for this order.
+ * @param {number|string=} opt_clientOrderId Defaults to random generated number
+ * @return {number|string}  Returns the clientOrderId for this order.
  */
 Application.prototype.sendBuyLimitedOrder = function( qty, price, opt_clientOrderId ) {
   var clientOrderId = opt_clientOrderId || 'algo_' + parseInt( 1e7 * Math.random() , 10 );
@@ -73,7 +74,7 @@ Application.prototype.sendBuyLimitedOrder = function( qty, price, opt_clientOrde
 
 /**
  * Cancel an order.  You must pass opt_clientOrderId nor opt_orderId
- * @param {number=} opt_clientOrderId Defaults to random generated number
+ * @param {number|string=} opt_clientOrderId Defaults to random generated number
  * @param {number=} opt_orderId
  */
 Application.prototype.cancelOrder = function( opt_clientOrderId, opt_orderId ) {
@@ -106,8 +107,8 @@ Application.prototype.cancelAllOrders = function() {
  * Send a sell order
  * @param {number} qty  The amount in satoshis
  * @param {number} price  The price in satoshis
- * @param {number=} opt_clientOrderId Defaults to random generated number
- * @return {number}  Returns the clientOrderId for this order.
+ * @param {number|string=} opt_clientOrderId Defaults to random generated number
+ * @return {number|string}  Returns the clientOrderId for this order.
  */
 Application.prototype.sendSellLimitedOrder = function( qty, price, opt_clientOrderId ) {
   var clientOrderId = opt_clientOrderId || 'algo_' + parseInt( 1e7 * Math.random() , 10 );

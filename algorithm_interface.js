@@ -6,6 +6,14 @@
  */
 var AlgorithmTradingInterface = function(application, symbol){};
 
+/**
+ * @enum {string} Balance Types
+ */
+AlgorithmTradingInterface.BalanceType = {
+  DEPOSIT : 'deposit',
+  LOCKED:  'locked',
+  AVAILABLE: 'available'
+};
 
 /**
  * Invoked when your algorithm is ready to run.
@@ -22,9 +30,11 @@ AlgorithmTradingInterface.prototype.stop = function() { };
 
 /**
  * Invoked whenever your balance change
- * @param {Object.<string,string|number>} msg
+ * @param {string} currency
+ * @param {number} balance
+ * @param {AlgorithmTradingInterface.BalanceType} balance_type
  */
-AlgorithmTradingInterface.prototype.onBalanceUpdate = function(msg) { };
+AlgorithmTradingInterface.prototype.onBalanceUpdate = function(currency, balance, balance_type) { };
 
 
 /**

@@ -101,11 +101,13 @@ example.MyBlinkTradeAlgorithm.prototype.onTicker = function(ticker) {
 };
 
 /**
-  * @param {Object.<string,string|number>} balance
+  * @param {string} currency
+  * @param {number} balance
   */
-example.MyBlinkTradeAlgorithm.prototype.onBalanceUpdate = function(balance) {
+example.MyBlinkTradeAlgorithm.prototype.onBalanceUpdate = function(currency, balance) {
   console.log('onBalanceUpdate');
-  console.log(balance);
+  console.log(currency + ':' +  balance);
+
 };
 
 //-----END ALGO-----

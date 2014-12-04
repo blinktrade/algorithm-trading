@@ -33,6 +33,7 @@ var Application = function( instance_id, websocket_url, symbol, open_orders, alg
   this.status_started_ = false;
   this.trade_history_ = [];
   this.order_book_ = {};
+  this.balance_ = {};
 
   this.ws_ = new WebSocket(this.websocket_url_);
 
@@ -57,7 +58,7 @@ Application.prototype.instance_;
  * @return {number}  Returns the clientOrderId for this order.
  */
 Application.prototype.sendBuyLimitedOrder = function( qty, price, opt_clientOrderId ) {
-  var clientOrderId = opt_clientOrderId || parseInt( 1e7 * Math.random() , 10 );
+  var clientOrderId = opt_clientOrderId || 'algo_' + parseInt( 1e7 * Math.random() , 10 );
 
   postMessage({ 'rep':'new_order_limited',
                 'instance':this.instance_id_,
@@ -109,7 +110,7 @@ Application.prototype.cancelAllOrders = function() {
  * @return {number}  Returns the clientOrderId for this order.
  */
 Application.prototype.sendSellLimitedOrder = function( qty, price, opt_clientOrderId ) {
-  var clientOrderId = opt_clientOrderId || parseInt( 1e7 * Math.random() , 10 );
+  var clientOrderId = opt_clientOrderId || 'algo_' + parseInt( 1e7 * Math.random() , 10 );
 
   postMessage({ 'rep':'new_order_limited',
                 'instance':this.instance_id_,
@@ -135,6 +136,24 @@ Application.prototype.sendSellLimitedOrder = function( qty, price, opt_clientOrd
 Application.prototype.getOrderBook = function() {
   return this.order_book_[this.selected_symbol_];
 };
+
+/**
+ * Returns user balance for the given currency
+ * @param {string} currency
+ * @param {AlgorithmTradingInterface.BalanceType} type
+ * return {number}
+ */
+Application.prototype.getBalance = function( currency, type ) {
+  if (type == "deposit") {
+    return this.balance_[currency];
+
+  } if (type == "available") {
+    return this.balance_[currency] - this.balance_[currency + '_locked'];
+  }
+  return this.balance_[currency + '_' + type];
+};
+
+
 
 /**
  * Return an array containing all trades that occurred in the past 24 hours
@@ -319,8 +338,15 @@ Application.prototype.terminate_ = function(error_message) {
  * @param {Object} msg
  */
 Application.prototype.processBalanceMsg_ = function(msg) {
+  goog.object.extend(this.balance_, msg);
   try {
-    this.instance_.onBalanceUpdate(msg);
+    goog.object.forEach( msg, function(balance, currency  ) {
+      if (currency.substring(4) == 'locked') {
+        this.instance_.onBalanceUpdate(currency.substring(0,3), balance, 'locked');
+      } else {
+        this.instance_.onBalanceUpdate(currency, balance, 'deposit');
+      }
+    }, this );
   } catch(e) {}
   postMessage({'rep':'balance', 'instance':this.instance_id_});
 };
@@ -611,6 +637,7 @@ goog.exportProperty(Application.prototype, 'cancelAllOrders', Application.protot
 goog.exportProperty(Application.prototype, 'cancelOrder', Application.prototype.cancelOrder);
 goog.exportProperty(Application.prototype, 'getOrderBook', Application.prototype.getOrderBook);
 goog.exportProperty(Application.prototype, 'getTrades', Application.prototype.getTrades);
+goog.exportProperty(Application.prototype, 'getBalance', Application.prototype.getBalance);
 goog.exportProperty(Application.prototype, 'getParameters', Application.prototype.getParameters);
 goog.exportProperty(Application.prototype, 'getOpenOrders', Application.prototype.getOpenOrders);
 goog.exportProperty(Application.prototype, 'getMarket', Application.prototype.getMarket);

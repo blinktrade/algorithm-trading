@@ -1,4 +1,4 @@
-### algorithm-trading  ( DOCUMENTATION IS IMCOMPLETE, TAKE A LOOK AT THE [EXAMPLES](https://github.com/blinktrade/algorithm-trading/tree/master/algorithms) )
+### algorithm-trading  ( DOCUMENTATION IS INCOMPLETE, TAKE A LOOK AT THE [EXAMPLES](https://github.com/blinktrade/algorithm-trading/tree/master/algorithms) )
 
 
 This repository contains algorithm trading programs ( AKA trading strategies, trading bot ) which are compatible with all exchanges running the blinktrade platform. Those algorithms are executed in the users browser context and not in the servers.

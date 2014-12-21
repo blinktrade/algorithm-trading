@@ -4,8 +4,8 @@
     "id": "blinktrade",
     "description": "blinktrade_algo",
     "params": [
-      {"name":"limit", "label":"Limite em R$", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1000;" },
-      {"name":"margin", "label":"Margem de operação em %", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 1; validateMax 5;" }
+      {"name":"limit", "label":"Limit", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1000;" },
+      {"name":"margin", "label":"Margin", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 1; validateMax 5;" }
     ],
     "creator": "blinktrade.SimpleMarketMarketAlgo.create",
     "destructor": "blinktrade.SimpleMarketMarketAlgo.destroy",
@@ -26,18 +26,9 @@ var blinktrade = {};
   * @constructor
   */
 blinktrade.SimpleMarketMarketAlgo = function(application, symbol){
-  console.log('blinktrade.SimpleMarketMarketAlgo');
-  console.log(symbol);
-
   this.application_ = application;
   this.symbol_ = symbol;
-  this.pending_orders_ = {};
 };
-
-/**
- * @type {Object}
- */
-blinktrade.SimpleMarketMarketAlgo.prototype.pending_orders_;
 
 /**
   * @param {Application} application
@@ -53,132 +44,11 @@ blinktrade.SimpleMarketMarketAlgo.create = function(application,symbol) {
   */
 blinktrade.SimpleMarketMarketAlgo.prototype.start = function(params) {
   this.calculateLimits();
+  this.cancelOrdersOutsideOfLimits();
+  this.makeTheMarket();
 };
 
 blinktrade.SimpleMarketMarketAlgo.prototype.stop = function() {
-  console.log('stop');
-};
-
-blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
-  if (!this.calculateLimits()) {
-    return;
-  }
-
-  //
-  // vamos encontrar o volume que deveremos fazer o mercado, para
-  // isso, vamos somar o volume do total de ordens em aberto
-  // e subtrarir isso do nosso balance total. A diferença do volume
-  // será o volume que iremos se comprometer na nova ordem.
-  //
-  var sum_buy_volume = 0;
-  var sum_sell_volume = 0;
-
-  var my_pending_orders = this.pending_orders_;
-  for (var pending_order_id in  my_pending_orders) {
-    var pending_order_details = my_pending_orders[pending_order_id];
-
-    var is_buy_pending_order = (pending_order_details['Side']  == '1' );
-    var is_sell_pending_order = (pending_order_details['Side']  == '2' );
-    var volume = (pending_order_details['Qty'] * pending_order_details['Price'] / 1e8 );
-    if (is_buy_pending_order){
-      sum_buy_volume += volume;
-    }
-
-    if (is_sell_pending_order){
-      sum_sell_volume += volume;
-    }
-  }
-
-  var my_orders = this.application_.getOpenOrders();
-  for (var order_id in  my_orders) {
-    var order = my_orders[order_id];
-
-    var is_an_order_sent_from_this_algo = (order['ClOrdID'].substr(0,4) == 'algo');
-    var is_buy_order = (order['Side']  == '1' );
-    var is_sell_order = (order['Side']  == '2' );
-    volume = (order['LeavesQty'] * order['Price'] / 1e8 );
-
-    if (is_an_order_sent_from_this_algo && is_buy_order){
-      sum_buy_volume += volume;
-    }
-
-    if (is_an_order_sent_from_this_algo && is_sell_order){
-      sum_sell_volume += volume;
-    }
-  }
-
-  // BTCUSD
-  var balance_crypto = 1000 * 1e8; // temp
-  var balance_fiat = 1000 * 1e8; // temp
-
-  //var balance_crypto = this.application_.getBalance(this.symbol_.substr(0,3));
-  //var balance_fiat = this.application_.getBalance(this.symbol_.substr(3,3));
-
-  var params   = this.application_.getParameters();
-  var limit = parseInt( parseFloat(params["limit"]),10) * 1e8;
-
-  var limit_buy = (limit > balance_fiat)?balance_fiat:limit;
-  var volume_to_buy = limit_buy - sum_buy_volume;
-  if ( volume_to_buy < 0 ) {
-    // OPS ... we have to cancel some orders .... we clearly exceed the limits
-  } else if  ( volume_to_buy > 0 ) {
-    var qty_to_buy = parseInt(volume_to_buy  / this.min_limit_bid_price_ * 1e8, 10);
-    if (qty_to_buy > 0){
-      var buy_client_order_id = this.application_.sendBuyLimitedOrder(qty_to_buy, this.min_limit_bid_price_);
-      this.pending_orders_[ buy_client_order_id] = { 'Side':1,'Qty':qty_to_buy, 'Price': this.min_limit_bid_price_};
-    }
-  }
-
-
-};
-
-blinktrade.SimpleMarketMarketAlgo.prototype.cancelOrdersOutsideOfLimits = function(){
-  if (!this.calculateLimits()) {
-    return;
-  }
-
-  var my_orders = this.application_.getOpenOrders();
-  for (var order_id in  my_orders) {
-    var order = my_orders[order_id];
-
-    var is_an_order_sent_from_this_algo = (order['ClOrdID'].substr(0,4) == 'algo');
-    var is_buy_order = (order['Side']  == '1' );
-    var is_sell_order = (order['Side']  == '2' );
-
-    if (!is_an_order_sent_from_this_algo){
-      // order was not sent from this algo .... just continue to the next order
-      continue;
-    }
-
-    //
-    // let's cancel the order in case we don't know the limits
-    //
-    if (is_buy_order && (this.min_limit_bid_price_ == null)  ) {
-      this.application_.cancelOrder(undefined, order['OrderID']);
-      continue;
-    }
-
-    if (is_sell_order && (this.min_limit_ask_price_ == null)  ) {
-      this.application_.cancelOrder(undefined, order['OrderID']);
-      continue;
-    }
-
-    //
-    // Let's now check if the order is within the limits
-    //
-    var is_order_outside_of_limits;
-    if (is_buy_order) {
-      is_order_outside_of_limits = !(order['Price'] > this.min_limit_bid_price_ && order['Price'] < this.max_limit_bid_price_);
-    } else if (is_sell_order) {
-      is_order_outside_of_limits = !(order['Price'] > this.min_limit_ask_price_ && order['Price'] < this.max_limit_ask_price_);
-    }
-
-    if (!is_order_outside_of_limits) {
-      // this order not within the limits .... cancel it and go to the next order/
-      this.application_.cancelOrder(undefined, order['OrderID']);
-      continue;
-    }
-  }
 };
 
 blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
@@ -186,7 +56,7 @@ blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
   var best_bid = this.application_.getOrderBook()['bids'][0][0];
   var best_ask = this.application_.getOrderBook()['asks'][0][0];
   var margin   = parseInt(params["margin"],10);
-  
+
   if (best_bid == null && best_ask == null) {
     this.application_.stop("No best bid/ask found.");
     return;
@@ -208,12 +78,6 @@ blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
     this.max_limit_ask_price_ = best_bid * ( 100 + margin )/100;
   }
 
-  console.log(params);
-  console.log( 'min_limit_bid_price_ =' + this.min_limit_bid_price_/1e8 );
-  console.log( 'max_limit_bid_price_ =' + this.max_limit_bid_price_/1e8 );
-  console.log( 'min_limit_ask_price_ =' + this.min_limit_ask_price_/1e8 );
-  console.log( 'max_limit_ask_price_ =' + this.max_limit_ask_price_/1e8 );
-
   return {
     "min_limit_bid_price": this.min_limit_bid_price_,
     "max_limit_bid_price": this.max_limit_bid_price_,
@@ -222,11 +86,130 @@ blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
   };
 };
 
+
+blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
+  if (!this.calculateLimits()) {
+    return;
+  }
+
+  var sum_buy_volume = 0;
+  var sum_sell_volume = 0;
+
+  var my_orders = this.application_.getOpenOrders();
+  for (var order_id in  my_orders) {
+    var order = my_orders[order_id];
+
+    var is_an_order_sent_from_this_algo = (order['ClOrdID'].substr(0,4) == 'algo');
+
+
+    var volume_not_yet_executed = (order['LeavesQty'] * order['Price'] / 1e8 );
+
+    var is_buy_order = (order['Side']  == '1' );
+    if (is_an_order_sent_from_this_algo && is_buy_order){
+      sum_buy_volume += volume_not_yet_executed;
+    }
+
+    var is_sell_order = (order['Side']  == '2' );
+    if (is_an_order_sent_from_this_algo && is_sell_order){
+      sum_sell_volume += volume_not_yet_executed;
+    }
+  }
+
+  // get customer balance
+  var balance_crypto = this.application_.getBalance(this.symbol_.substr(0,3), 'available' );
+  var balance_fiat = this.application_.getBalance(this.symbol_.substr(3,3), 'available' );
+
+  var bid_price = (this.min_limit_bid_price_ + this.max_limit_bid_price_) /2 ;
+  var ask_price = (this.min_limit_ask_price_ + this.max_limit_ask_price_) / 2 ;
+
+
+  var params   = this.application_.getParameters();
+
+  // find the quantity to buy
+  var limit_buy_volume = parseInt( parseFloat(params["limit"]),10) * 1e8;
+  if  (limit_buy_volume > balance_fiat) {
+    limit_buy_volume = balance_fiat;
+  }
+  var volume_to_buy = limit_buy_volume - sum_buy_volume;
+  var qty_to_buy = 0;
+  if  ( volume_to_buy > 0 ) {
+    qty_to_buy = parseInt(volume_to_buy  / bid_price * 1e8, 10);
+  }
+
+  // find the quantity to sell
+  var limit_sell_volume = parseInt( parseFloat(params["limit"]),10) * 1e8  ;
+  if (limit_sell_volume > (balance_crypto * ask_price / 1e8)) {
+    limit_sell_volume = (balance_crypto * ask_price / 1e8);
+  }
+  var volume_to_sell = limit_sell_volume - sum_sell_volume;
+  var qty_to_sell = parseInt(volume_to_sell / ask_price * 1e8 , 10) ;
+  if (qty_to_sell > balance_crypto) {
+    qty_to_sell = balance_crypto;
+  }
+
+  if (qty_to_buy > 0){
+    this.application_.sendBuyLimitedOrder(qty_to_buy, bid_price);
+  }
+  if (qty_to_sell > 0) {
+    this.application_.sendSellLimitedOrder(qty_to_sell, ask_price);
+  }
+};
+
+blinktrade.SimpleMarketMarketAlgo.prototype.cancelOrdersOutsideOfLimits = function(){
+  if (!this.calculateLimits()) {
+    return;
+  }
+
+  var my_orders = this.application_.getOpenOrders();
+  for (var order_id in  my_orders) {
+    var order = my_orders[order_id];
+
+    var is_an_order_sent_from_this_algo = (order['ClOrdID'].substr(0,4) == 'algo');
+
+    if (!is_an_order_sent_from_this_algo){
+      // order was not sent from this algo .... just continue to the next order
+      continue;
+    }
+
+
+    var is_buy_order = (order['Side']  == '1' );
+    var is_sell_order = (order['Side']  == '2' );
+
+    //
+    // let's cancel the order in case we don't know the limits
+    //
+    if (is_buy_order && (this.min_limit_bid_price_ == null)  ) {
+      this.application_.cancelOrder(order['ClOrdID']);
+      continue;
+    }
+
+    if (is_sell_order && (this.min_limit_ask_price_ == null)  ) {
+      this.application_.cancelOrder(order['ClOrdID']);
+      continue;
+    }
+
+    //
+    // Let's now check if the order is within the limits
+    //
+    var is_order_outside_of_limits;
+    if (is_buy_order) {
+      is_order_outside_of_limits = !(order['Price'] > this.min_limit_bid_price_ && order['Price'] < this.max_limit_bid_price_);
+    } else if (is_sell_order) {
+      is_order_outside_of_limits = !(order['Price'] > this.min_limit_ask_price_ && order['Price'] < this.max_limit_ask_price_);
+    }
+
+    if (is_order_outside_of_limits) {
+      // this order not within the limits .... cancel it and go to the next order
+      this.application_.cancelOrder(order['ClOrdID']);
+      continue;
+    }
+  }
+};
+
 /**
   * @param {Object.<string,*>} params
   */
 blinktrade.SimpleMarketMarketAlgo.prototype.onUpdateParams = function(params) {
-  console.log('onUpdateParams');
   this.cancelOrdersOutsideOfLimits();
   this.makeTheMarket();
 };
@@ -235,28 +218,36 @@ blinktrade.SimpleMarketMarketAlgo.prototype.onUpdateParams = function(params) {
   * @param {Array.<Array.<number>>} order_book
   */
 blinktrade.SimpleMarketMarketAlgo.prototype.onOrderBookChange = function(order_book) {
-  console.log('onOrderBookChange');
   this.cancelOrdersOutsideOfLimits();
   this.makeTheMarket();
 };
 
+
 /**
-  * @param {Object.<string,string|number>} report
-  */
-blinktrade.SimpleMarketMarketAlgo.prototype.onExecutionReport = function(report) {
-  console.log('onExecutionReport');
-  console.log(report);
+ * Invoked when there is a new trade in the exchange
+ * @param {Object.<string,string|number>} trade
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.onTrade = function(trade) {
+  this.cancelOrdersOutsideOfLimits();
   this.makeTheMarket();
 };
 
+
 /**
+  * Invoked to report the arrival of a new order, and executions on it.
+  * @param {Object.<string,string|number>} report
+  */
+blinktrade.SimpleMarketMarketAlgo.prototype.onExecutionReport = function(report) {};
+
+
+/**
+  * Invoked whenever your balance change
   * @param {string} currency
   * @param {number} balance
   */
 blinktrade.SimpleMarketMarketAlgo.prototype.onBalanceUpdate = function(currency, balance) {
-  console.log('onBalanceUpdate');
-  console.log(currency + ':' +  balance);
-
+  this.cancelOrdersOutsideOfLimits();
+  this.makeTheMarket();
 };
 
 //-----END ALGO-----

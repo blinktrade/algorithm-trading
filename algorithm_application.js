@@ -449,10 +449,6 @@ Application.prototype.onMDNewOrder_ = function(msg) {
   try {
     this.instance_.onOrderBookNewOrder(msg);
   } catch(e) {}
-
-  try {
-    this.instance_.onOrderBookChange(this.order_book_[symbol]);
-  } catch(e) {}
 };
 
 Application.prototype.onMDUpdateOrder_ = function(msg) {
@@ -474,10 +470,6 @@ Application.prototype.onMDUpdateOrder_ = function(msg) {
   try {
     this.instance_.onOrderBookUpdateOrder(msg);
   } catch(e) {}
-
-  try {
-    this.instance_.onOrderBookChange(this.order_book_[symbol]);
-  } catch(e) {}
 };
 
 Application.prototype.onMDDeleteOrder_ = function(msg) {
@@ -498,10 +490,6 @@ Application.prototype.onMDDeleteOrder_ = function(msg) {
   try {
     this.instance_.onOrderBookDeleteOrder(msg);
   } catch(e) {}
-
-  try {
-    this.instance_.onOrderBookChange(this.order_book_[symbol]);
-  } catch(e) {}
 };
 
 Application.prototype.onMDDeleteOrderThru_ = function(msg) {
@@ -521,10 +509,6 @@ Application.prototype.onMDDeleteOrderThru_ = function(msg) {
 
   try {
     this.instance_.onOrderBookDeleteOrdersThru(msg);
-  } catch(e) {}
-
-  try {
-    this.instance_.onOrderBookChange(this.order_book_[symbol]);
   } catch(e) {}
 };
 
@@ -586,12 +570,14 @@ Application.prototype.onWebSocketMessage_ = function (e) {
       this.status_received_full_refresh_ = true;
       break;
     case 'X':
+      var has_order_book_changed = false;
       for ( var y in msg['MDIncGrp']) {
         var xentry = msg['MDIncGrp'][y];
         xentry['MDReqID'] = msg['MDReqID'];
         switch (xentry['MDEntryType']) {
           case '0': // Bid
           case '1': // Offer
+            has_order_book_changed = true;
             switch( xentry['MDUpdateAction'] ) {
               case '0':
                 this.onMDNewOrder_(xentry);
@@ -612,6 +598,12 @@ Application.prototype.onWebSocketMessage_ = function (e) {
             break;
         }
       }
+
+      try {
+        if (this.status_started_ && has_order_book_changed) {
+          this.instance_.onOrderBookChange(this.order_book_[this.selected_symbol_]);
+        }
+      } catch(e) {}
       break;
   }
 };

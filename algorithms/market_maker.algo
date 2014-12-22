@@ -4,8 +4,8 @@
     "id": "blinktrade",
     "description": "blinktrade_algo",
     "params": [
-      {"name":"limit", "label":"Limit", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1000;" },
-      {"name":"margin", "label":"Margin", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 1; validateMax 5;" }
+      {"name":"limit", "label":"Limit", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1500;" },
+      {"name":"margin", "label":"Margin", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 3; validateMax 6;" }
     ],
     "creator": "blinktrade.SimpleMarketMarketAlgo.create",
     "destructor": "blinktrade.SimpleMarketMarketAlgo.destroy",

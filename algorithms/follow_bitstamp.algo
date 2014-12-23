@@ -1,0 +1,136 @@
+/*
+ -----BEGIN ALGO DEFINITION-----
+ {
+ "id": "bitstamp",
+ "description": "Notifies the user when there is a new best bid/ask and trade at BitStamp",
+ "params": [
+   {"name":"exchange_rate", "label":"Dollar exchange rate", "type":"text", "value":"1", "validator":"required; validateNumber; validateMin 0;" }
+ ],
+ "creator": "blinktrade.FollowBitStampAlgo.create",
+ "destructor": "blinktrade.FollowBitStampAlgo.destroy",
+ "permissions": ["notification", "balance", "execution_report", "new_order_limited", "cancel_order"]
+ }
+ -----END ALGO DEFINITION-----
+ -----BEGIN ALGO-----
+ /**/
+
+
+/**
+ * Namespace.
+ */
+var blinktrade = {};
+
+
+/**
+ * @param {Object} application
+ * @param {string} symbol
+ * @constructor
+ */
+blinktrade.FollowBitStampAlgo = function(application, symbol){
+  this.application_ = application;
+  this.symbol_ = symbol;
+  this.bitstamp_order_book_channel_subscription_ = false;
+};
+
+/**
+ * @type {boolean}
+ */
+blinktrade.FollowBitStampAlgo.prototype.bitstamp_order_book_channel_subscription_;
+
+/**
+ * @type {number}
+ */
+blinktrade.FollowBitStampAlgo.prototype.last_best_bid_;
+
+/**
+ * @type {number}
+ */
+blinktrade.FollowBitStampAlgo.prototype.last_best_ask_;
+
+
+/**
+ * @param {Application} application
+ * @param {string} symbol
+ * @return {blinktrade.FollowBitStampAlgo}
+ */
+blinktrade.FollowBitStampAlgo.create = function(application,symbol) {
+  return new blinktrade.FollowBitStampAlgo(application,symbol);
+};
+
+/**
+ * @param {Object} params
+ */
+blinktrade.FollowBitStampAlgo.prototype.start = function(params) {
+  this.ws_pusher_ = new WebSocket('wss://ws.pusherapp.com/app/de504dc5763aeef9ff52?protocol=7&client=js&version=2.1.6&flash=false');
+  this.ws_pusher_.onopen = goog.bind(this.onPusherOpen_, this);
+  this.ws_pusher_.onmessage = goog.bind(this.onPusherMessage_, this);
+  this.ws_pusher_.onclose = goog.bind(this.onPusherClose_, this);
+};
+
+blinktrade.FollowBitStampAlgo.prototype.onPusherOpen_ = function() {
+  this.ws_pusher_.send( JSON.stringify({"event":"pusher:subscribe","data":{"channel":"order_book"}}));
+  this.ws_pusher_.send( JSON.stringify({"event":"pusher:subscribe","data":{"channel":"live_trades"}}));
+};
+
+blinktrade.FollowBitStampAlgo.prototype.onPusherClose_ = function() {
+  this.application_.stop('Problems with pusher');
+};
+
+blinktrade.FollowBitStampAlgo.prototype.onPusherMessage_ = function (e) {
+  var msg = JSON.parse(e.data);
+  switch(msg["event"]) {
+    case 'pusher:error':
+      this.stop( msg["data"]["message"] );
+      break;
+    case 'pusher_internal:subscription_succeeded':
+      if (msg["channel"] == "order_book") {
+        this.bitstamp_order_book_channel_subscription_ = true;
+      }
+      break;
+    case 'data':
+        switch(msg["channel"]){
+          case "order_book":
+            this.onBitStampOrderBookData(JSON.parse(msg["data"]));
+            return;
+          case "live_trades":
+            this.onBitStampTrade(JSON.parse(msg["data"]));
+            return;
+        }
+  }
+};
+
+/**
+ * @param {Object} trade
+ */
+blinktrade.FollowBitStampAlgo.prototype.onBitStampTrade = function(trade) {
+  var exchange_rate = parseFloat(this.application_.getParameters()['exchange_rate']);
+  this.application_.showNotification('BitStamp trade',
+    'price:' + parseFloat(trade['price']) * exchange_rate +  ', amount:' + trade['amount'], 'error' );
+};
+
+/**
+ * @param {Object.<string, Array.<Array.<number>>> } order_book
+ */
+blinktrade.FollowBitStampAlgo.prototype.onBitStampOrderBookData = function(order_book) {
+  var exchange_rate = parseFloat(this.application_.getParameters()['exchange_rate']);
+
+  var best_bid = parseFloat(order_book['bids'][0][0]) * exchange_rate;
+  var best_ask = parseFloat(order_book['asks'][0][0]) * exchange_rate;
+
+  if (this.last_best_bid_ !=  best_bid) {
+    this.last_best_bid_ = best_bid;
+    this.application_.showNotification('BitStamp', 'The new best bid is ' + best_bid, 'success' );
+  }
+
+
+  if ( this.last_best_ask_ !=  best_ask ) {
+    this.last_best_ask_ = best_ask;
+    this.application_.showNotification('BitStamp', 'The new best ask is ' + best_bid, 'info' );
+  }
+};
+
+blinktrade.FollowBitStampAlgo.prototype.stop = function() {
+  this.ws_pusher_.close();
+};
+
+//-----END ALGO-----

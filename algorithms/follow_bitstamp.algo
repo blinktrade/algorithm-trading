@@ -125,7 +125,7 @@ blinktrade.FollowBitStampAlgo.prototype.onBitStampOrderBookData = function(order
 
   if ( this.last_best_ask_ !=  best_ask ) {
     this.last_best_ask_ = best_ask;
-    this.application_.showNotification('BitStamp', 'The new best ask is ' + best_bid, 'info' );
+    this.application_.showNotification('BitStamp', 'The new best ask is ' + best_ask, 'info' );
   }
 };
 

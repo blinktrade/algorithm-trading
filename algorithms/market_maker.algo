@@ -2,10 +2,11 @@
 -----BEGIN ALGO DEFINITION-----
 {
     "id": "blinktrade",
-    "description": "blinktrade_algo",
+    "description": "Make the market following bitstamp order book",
     "params": [
-      {"name":"limit", "label":"Limit", "type":"text", "value":"0", "validator":"required; validateNumber; validateMin 10; validateMax 1500;" },
-      {"name":"margin", "label":"Margin", "type":"text", "value":"5", "validator":"required; validateInteger; validateMin 3; validateMax 6;" }
+      {"name":"dollar", "label":"Dollar ex rate", "type":"number", "value":"", "filter":"positive_number", "validator":"required; validateMin 0; validateNumber;" },
+      {"name":"spread", "label":"Spread", "type":"number", "value":"1", "filter":"positive_number", "validator":"required; validateMin 0; validateNumber;" },
+      {"name":"limit", "label":"Limit",   "type":"number", "value":"" , "filter":"positive_number", "validator":"required; validateMin 0; validateNumber;" }
     ],
     "creator": "blinktrade.SimpleMarketMarketAlgo.create",
     "destructor": "blinktrade.SimpleMarketMarketAlgo.destroy",
@@ -28,7 +29,25 @@ var blinktrade = {};
 blinktrade.SimpleMarketMarketAlgo = function(application, symbol){
   this.application_ = application;
   this.symbol_ = symbol;
+  this.bitstamp_order_book_channel_subscription_ = false;
 };
+
+/**
+ * @type {boolean}
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.bitstamp_order_book_channel_subscription_;
+
+/**
+ * @type {number}
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.last_best_bid_;
+
+/**
+ * @type {number}
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.last_best_ask_;
+
+
 
 /**
   * @param {Application} application
@@ -43,19 +62,97 @@ blinktrade.SimpleMarketMarketAlgo.create = function(application,symbol) {
   * @param {Object} params
   */
 blinktrade.SimpleMarketMarketAlgo.prototype.start = function(params) {
-  this.calculateLimits();
-  this.cancelOrdersOutsideOfLimits();
-  this.makeTheMarket();
+  this.startPusher_();
 };
 
 blinktrade.SimpleMarketMarketAlgo.prototype.stop = function() {
+  this.ws_pusher_.close();
+  this.ws_pusher_ = null;
 };
+
+blinktrade.SimpleMarketMarketAlgo.prototype.startPusher_ = function() {
+  this.ws_pusher_ = new WebSocket('wss://ws.pusherapp.com/app/de504dc5763aeef9ff52?protocol=7&client=js&version=2.1.6&flash=false');
+  this.ws_pusher_.onopen = goog.bind(this.onPusherOpen_, this);
+  this.ws_pusher_.onmessage = goog.bind(this.onPusherMessage_, this);
+  this.ws_pusher_.onclose = goog.bind(this.onPusherClose_, this);
+};
+
+blinktrade.SimpleMarketMarketAlgo.prototype.onPusherOpen_ = function() {
+  this.ws_pusher_.send( JSON.stringify({"event":"pusher:subscribe","data":{"channel":"order_book"}}));
+  this.ws_pusher_.send( JSON.stringify({"event":"pusher:subscribe","data":{"channel":"live_trades"}}));
+};
+
+blinktrade.SimpleMarketMarketAlgo.prototype.onPusherClose_ = function() {
+  this.startPusher_();
+};
+
+
+blinktrade.SimpleMarketMarketAlgo.prototype.onPusherMessage_ = function (e) {
+  var msg = JSON.parse(e.data);
+  switch(msg["event"]) {
+    case 'pusher:error':
+      this.stop( msg["data"]["message"] );
+      break;
+    case 'pusher_internal:subscription_succeeded':
+      if (msg["channel"] == "order_book") {
+        this.bitstamp_order_book_channel_subscription_ = true;
+      }
+      break;
+    case 'data':
+        switch(msg["channel"]){
+          case "order_book":
+            this.onBitStampOrderBookData(JSON.parse(msg["data"]));
+            return;
+          case "live_trades":
+            this.onBitStampTrade(JSON.parse(msg["data"]));
+            return;
+        }
+  }
+};
+
+
+/**
+ * @param {Object} trade
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.onBitStampTrade = function(trade) {
+  var exchange_rate = this.application_.getParameters()['dollar'];
+};
+
+
+/**
+ * @param {Object.<string, Array.<Array.<number>>> } order_book
+ */
+blinktrade.SimpleMarketMarketAlgo.prototype.onBitStampOrderBookData = function(order_book) {
+  var exchange_rate = this.application_.getParameters()['dollar'];
+
+  var best_bid = parseInt(parseFloat(order_book['bids'][0][0]) * exchange_rate * 1e8,10);
+  var best_ask = parseInt(parseFloat(order_book['asks'][0][0]) * exchange_rate * 1e8,10);
+
+  var market_has_changed = false;
+
+  if (this.last_best_bid_ !=  best_bid) {
+    this.last_best_bid_ = best_bid;
+    market_has_changed = true;
+  }
+
+
+  if ( this.last_best_ask_ !=  best_ask ) {
+    this.last_best_ask_ = best_ask;
+    market_has_changed = true;
+  }
+
+  if (market_has_changed) {
+     this.cancelOrdersOutsideOfLimits();
+     this.makeTheMarket();
+  }
+};
+
 
 blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
   var params   = this.application_.getParameters();
-  var best_bid = this.application_.getOrderBook()['bids'][0][0];
-  var best_ask = this.application_.getOrderBook()['asks'][0][0];
-  var margin   = parseInt(params["margin"],10);
+  var best_bid = this.last_best_bid_;
+  var best_ask = this.last_best_ask_;
+  var spread   = params["spread"];
 
   if (best_bid == null && best_ask == null) {
     this.application_.stop("No best bid/ask found.");
@@ -68,14 +165,15 @@ blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
   this.max_limit_bid_price_ = null;
   this.min_limit_ask_price_ = null;
   this.max_limit_ask_price_ = null;
+
   if (best_bid != null) {
-    this.min_limit_bid_price_ = best_ask * ( 100 - margin )/100 ;
-    this.max_limit_bid_price_ = best_ask * ( 101 - margin )/100 ;
+    this.min_limit_bid_price_ = best_bid * ( 100 - spread/2 - spread/10 )/100 ;
+    this.max_limit_bid_price_ = best_bid * ( 100 - spread/2 )/100 ;
   }
 
   if (best_ask != null) {
-    this.min_limit_ask_price_ = best_bid * (  99 + margin )/100;
-    this.max_limit_ask_price_ = best_bid * ( 100 + margin )/100;
+    this.min_limit_ask_price_ = best_ask * ( 100 + spread/2 )/100;
+    this.max_limit_ask_price_ = best_ask * ( 100 + spread/2 + spread/10 )/100;
   }
 
   return {
@@ -86,12 +184,7 @@ blinktrade.SimpleMarketMarketAlgo.prototype.calculateLimits = function() {
   };
 };
 
-
-blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
-  if (!this.calculateLimits()) {
-    return;
-  }
-
+blinktrade.SimpleMarketMarketAlgo.prototype.getMyVolume = function() {
   var sum_buy_volume = 0;
   var sum_sell_volume = 0;
 
@@ -114,19 +207,30 @@ blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
       sum_sell_volume += volume_not_yet_executed;
     }
   }
+  return [ sum_buy_volume, sum_sell_volume];
+};
+
+blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
+  if (!this.calculateLimits()) {
+    return;
+  }
+
+  var buy_sell_volume = this.getMyVolume();
+  var sum_buy_volume = buy_sell_volume[0];
+  var sum_sell_volume = buy_sell_volume[1];
+
 
   // get customer balance
   var balance_crypto = this.application_.getBalance(this.symbol_.substr(0,3), 'available' );
   var balance_fiat = this.application_.getBalance(this.symbol_.substr(3,3), 'available' );
 
-  var bid_price = (this.min_limit_bid_price_ + this.max_limit_bid_price_) /2 ;
+  var bid_price = (this.min_limit_bid_price_ + this.max_limit_bid_price_) / 2 ;
   var ask_price = (this.min_limit_ask_price_ + this.max_limit_ask_price_) / 2 ;
-
 
   var params   = this.application_.getParameters();
 
   // find the quantity to buy
-  var limit_buy_volume = parseInt( parseFloat(params["limit"]),10) * 1e8;
+  var limit_buy_volume = parseInt( params["limit"] * 1e8);
   if  (limit_buy_volume > balance_fiat) {
     limit_buy_volume = balance_fiat;
   }
@@ -137,7 +241,7 @@ blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
   }
 
   // find the quantity to sell
-  var limit_sell_volume = parseInt( parseFloat(params["limit"]),10) * 1e8  ;
+  var limit_sell_volume = parseInt( params["limit"] * 1e8 );
   if (limit_sell_volume > (balance_crypto * ask_price / 1e8)) {
     limit_sell_volume = (balance_crypto * ask_price / 1e8);
   }
@@ -147,10 +251,10 @@ blinktrade.SimpleMarketMarketAlgo.prototype.makeTheMarket = function() {
     qty_to_sell = balance_crypto;
   }
 
-  if (qty_to_buy > 0){
+  if (qty_to_buy > 100000){
     this.application_.sendBuyLimitedOrder(qty_to_buy, bid_price);
   }
-  if (qty_to_sell > 0) {
+  if (qty_to_sell > 100000) {
     this.application_.sendSellLimitedOrder(qty_to_sell, ask_price);
   }
 };
@@ -193,9 +297,9 @@ blinktrade.SimpleMarketMarketAlgo.prototype.cancelOrdersOutsideOfLimits = functi
     //
     var is_order_outside_of_limits;
     if (is_buy_order) {
-      is_order_outside_of_limits = !(order['Price'] > this.min_limit_bid_price_ && order['Price'] < this.max_limit_bid_price_);
+      is_order_outside_of_limits = !(order['Price'] >= this.min_limit_bid_price_ && order['Price'] <= this.max_limit_bid_price_);
     } else if (is_sell_order) {
-      is_order_outside_of_limits = !(order['Price'] > this.min_limit_ask_price_ && order['Price'] < this.max_limit_ask_price_);
+      is_order_outside_of_limits = !(order['Price'] >= this.min_limit_ask_price_ && order['Price'] <= this.max_limit_ask_price_);
     }
 
     if (is_order_outside_of_limits) {
@@ -213,32 +317,6 @@ blinktrade.SimpleMarketMarketAlgo.prototype.onUpdateParams = function(params) {
   this.cancelOrdersOutsideOfLimits();
   this.makeTheMarket();
 };
-
-/**
-  * @param {Array.<Array.<number>>} order_book
-  */
-blinktrade.SimpleMarketMarketAlgo.prototype.onOrderBookChange = function(order_book) {
-  this.cancelOrdersOutsideOfLimits();
-  this.makeTheMarket();
-};
-
-
-/**
- * Invoked when there is a new trade in the exchange
- * @param {Object.<string,string|number>} trade
- */
-blinktrade.SimpleMarketMarketAlgo.prototype.onTrade = function(trade) {
-  this.cancelOrdersOutsideOfLimits();
-  this.makeTheMarket();
-};
-
-
-/**
-  * Invoked to report the arrival of a new order, and executions on it.
-  * @param {Object.<string,string|number>} report
-  */
-blinktrade.SimpleMarketMarketAlgo.prototype.onExecutionReport = function(report) {};
-
 
 /**
   * Invoked whenever your balance change

@@ -50,6 +50,7 @@ The exchange expects you to create a javascript class that implements the follow
 
 ### List of exchanges running blinktrade platform 
 - [chilebit](https://chilebit.net)
-- [foxbit](https://foxbit.exchange)
+- [foxbit](https://foxbit.com.br)
+- [VBTC](https://vbtc.vn)
 - [surbitcoin](https://surbitcoin.com) 
 - [urdubit](https://urdubit.com)

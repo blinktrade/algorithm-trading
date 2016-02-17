@@ -12,7 +12,7 @@
     "creator": "blinktrade.SmartOrderAlgo.create",
     "destructor": "blinktrade.SmartOrderAlgo.destroy",
     "permissions": ["notification", "balance", "execution_report", "new_order_limited", "cancel_order"],
-    "tickers" : ["UOL:USDBRT","UOL:USDBRL", "BITFINEX:BTCUSD"]
+    "tickers" : ["UOL:USDBRT","BITFINEX:BTCUSD", "OKCOIN:BTCCNY"]
 }
 -----END ALGO DEFINITION-----
 -----BEGIN ALGO-----
@@ -33,7 +33,7 @@ blinktrade.SmartOrderAlgo = function(application, symbol){
   this.symbol_ = symbol;
 
   this.my_orders_prefix_ = 'p' + parseInt( 1e4 * Math.random() , 10 ) + '_';
-  this.price_increment_ = 0.10;
+  this.price_increment_ = 0.01;
 };
 
 /**
@@ -72,6 +72,13 @@ blinktrade.SmartOrderAlgo.prototype.start = function(params) {
 blinktrade.SmartOrderAlgo.prototype.stop = function() {
   clearInterval(this.timer_);
   this.cancellAlgoOrders();
+};
+
+/**
+  * @param {Object} msg 
+  */
+blinktrade.SmartOrderAlgo.prototype.onTicker = function(msg) {
+  console.log(msg);
 };
 
 /**

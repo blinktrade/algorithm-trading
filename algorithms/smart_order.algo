@@ -11,7 +11,8 @@
     ],
     "creator": "blinktrade.SmartOrderAlgo.create",
     "destructor": "blinktrade.SmartOrderAlgo.destroy",
-    "permissions": ["notification", "balance", "execution_report", "new_order_limited", "cancel_order"]
+    "permissions": ["notification", "balance", "execution_report", "new_order_limited", "cancel_order"],
+    "tickers" : ["UOL:USDBRT","UOL:USDBRL", "BITFINEX:BTCUSD"]
 }
 -----END ALGO DEFINITION-----
 -----BEGIN ALGO-----
@@ -90,7 +91,6 @@ blinktrade.SmartOrderAlgo.prototype.onUpdateParams = function(params) {
  */
 blinktrade.SmartOrderAlgo.prototype.onExecutionReport  = function(msg) {
   this.target_qty_ = msg['LeavesQty'];
-  console.log(msg);
 };
 
 
@@ -107,6 +107,9 @@ blinktrade.SmartOrderAlgo.prototype.sendOrders = function() {
   var max_price = params["max_price"] * 1e8;
   var min_price = params["min_price"] * 1e8;
 
+  if (this.target_qty_ < 10000) { // minimum qty
+    return;
+  }
 
   var order_book = this.application_.getOrderBook();
 

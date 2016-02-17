@@ -17,9 +17,10 @@ goog.require('goog.object');
  * @param {Object.<string,string|number|Object>} algorithm_definition
  * @param {Object.<string,number>} balance
  * @param {function(Application,string): AlgorithmTradingInterface} fn_creator
+ * @param {Array.<string>=} opt_tickers
  * @constructor
  */
-var Application = function( instance_id, websocket_url, symbol, open_orders, algorithm_definition,balance, fn_creator ) {
+var Application = function( instance_id, websocket_url, symbol, open_orders, algorithm_definition,balance, fn_creator, opt_tickers) {
   this.websocket_url_ = websocket_url;
   this.instance_id_ = instance_id;
   this.selected_symbol_ = symbol;
@@ -33,6 +34,10 @@ var Application = function( instance_id, websocket_url, symbol, open_orders, alg
   this.status_started_ = false;
   this.trade_history_ = [];
   this.order_book_ = {};
+  this.tikers_ = [symbol];
+  if (goog.isDefAndNotNull(opt_tickers) && goog.isArrayLike(opt_tickers)) {
+    this.tikers_ = opt_tickers;
+  }
   this.balance_ = balance;
 
   this.ws_ = new WebSocket(this.websocket_url_);
@@ -309,7 +314,7 @@ Application.prototype.onWebSocketOpen_ = function(e) {
     'MsgType': 'e',
     'SecurityStatusReqID': parseInt( 1e7 * Math.random() , 10 ),
     'SubscriptionRequestType': '1',
-    'Instruments': instruments
+    'Instruments': this.tikers_
   };
   this.ws_.send(JSON.stringify(msgSubscribeSecurityStatus));
 
@@ -625,7 +630,8 @@ addEventListener('message', function(e) {
                                context["open_orders"],
                                context["algo_definition"],
                                context["balance"],
-                               creator_fn);
+                               creator_fn,
+                               context["tickers"]);
         break;
       case 'start':
         _app.start_(data['params']);

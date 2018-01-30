@@ -46,7 +46,8 @@ function name_of_the_functions_which_the_exchange_will_invoke_when_destroying_th
 ### How does it work 
 The exchange expects you to create a javascript class that implements the following [interface](https://github.com/blinktrade/algorithm-trading/blob/master/algorithm_interface.js) 
 
-
+### Documentation ###
+To see how to send or cancel orders or if you have any questions about the API, take a look at [Blinktrade docs](https://blinktrade.com/docs/). 
 
 ### List of exchanges running blinktrade platform 
 - [chilebit](https://chilebit.net)

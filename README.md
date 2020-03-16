@@ -8,7 +8,7 @@ This repository contains algorithm trading programs ( AKA trading strategies, tr
 - Curiosity 
 
 ### Is there a test environment to test my algorithms?
-- Yes, [blinktrade tesnet exchange](https://testnet.blinktrade.com/)
+- Yes, [blinktrade testnet exchange](https://testnet.blinktrade.com/)
 
 
 ### List of blinktrade approved algorithm trading strategies 
